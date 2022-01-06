@@ -2,6 +2,12 @@ import { RectanglePoints } from '../../../types/vectors';
 
 export type CarLicencePlateType = string;
 
+export type CarLossWithDetailsType = {
+  loss: number,
+  distanceFromParking: number,
+  numberOfCollisions: number
+}
+
 export type SensorValueType = number | undefined | null;
 export type SensorValuesType = SensorValueType[];
 
@@ -13,10 +19,10 @@ export type CarType = {
   generationIndex: number,
   genomeIndex: number,
   sensorsNum?: number,
-  onHit?: () => void,
+  onCollide?: (carMetaData: CarMetaData, event: any) => void,
   onEngine?: (sensors: SensorValuesType) => EngineOptionsType,
   onWheel?: (sensors: SensorValuesType) => WheelOptionsType,
-  onMove?: (wheelsPoints: RectanglePoints) => void,
+  onMove?: (wheelsPoints: RectanglePoints, numberOfCollisions: number) => void,
   meta?: Record<string, any>,
 };
 

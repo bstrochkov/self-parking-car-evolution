@@ -26,12 +26,20 @@ export const GENOME_LENGTH = ENGINE_FORMULA_GENES_NUM + WHEELS_FORMULA_GENES_NUM
 type LossParams = {
   wheelsPosition: RectanglePoints,
   parkingLotCorners: RectanglePoints,
+  numberOfCollisions: number;
 };
 
-// Loss function calculates how far the car is from the parking lot
-// by comparing the wheels positions with parking lot corners positions.
+// Car loss function calculates the car's loss score based on different factors,
+// including: distance from parking and number of collisions. The bigger the loss the worse.
 export const carLoss = (params: LossParams): number => {
-  const { wheelsPosition, parkingLotCorners } = params;
+  const distanceFromParking = carDistanceFromParking(params.wheelsPosition, params.parkingLotCorners);
+  const penaltyForCollision = params.numberOfCollisions;
+  return distanceFromParking + penaltyForCollision;
+}
+
+// Calculates how far the car is from the parking lot
+// by comparing the wheels positions with parking lot corners positions.
+export const carDistanceFromParking = (wheelsPosition: RectanglePoints, parkingLotCorners: RectanglePoints): number => {
 
   const {
     fl: flWheel,

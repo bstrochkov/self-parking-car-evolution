@@ -5,7 +5,7 @@ import { Check } from 'baseui/icon';
 import { Notification } from 'baseui/notification';
 
 import { Generation, Genome } from '../../libs/genetic';
-import { CarLicencePlateType, CarType } from '../world/types/car';
+import { CarLicencePlateType, CarLossWithDetailsType, CarType } from '../world/types/car';
 import {
   SECOND,
   TRAINED_CAR_GENERATION_LIFETIME
@@ -30,8 +30,8 @@ function EvolutionTabAutomatic() {
   const {enqueue} = useSnackbar();
 
   const bestTrainedCarLossRef = useRef<number | null>(null);
-  const onTrainedCarLossUpdate = (licensePlate: CarLicencePlateType, loss: number) => {
-    bestTrainedCarLossRef.current = loss;
+  const onTrainedCarLossUpdate = (licensePlate: CarLicencePlateType, lossWithDetails: CarLossWithDetailsType) => {
+    bestTrainedCarLossRef.current = lossWithDetails.loss;
   };
 
   const [performanceBoost, setPerformanceBoost] = useState<boolean>(false);

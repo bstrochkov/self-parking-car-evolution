@@ -7,8 +7,8 @@ import { BiUpload } from 'react-icons/all';
 import { Notification } from 'baseui/notification';
 
 import { createGeneration, Generation, Genome, Percentage, Probability, select } from '../../libs/genetic';
-import { CarsLossType, CarsInProgressType } from './PopulationTable';
-import { CarLicencePlateType, CarsType, CarType } from '../world/types/car';
+import { CarsInProgressType, LicensePlateToLossMapType } from './PopulationTable';
+import { CarLicencePlateType, CarLossWithDetailsType, CarsType, CarType } from '../world/types/car';
 import {
   DEFAULT_BATCH_SIZE,
   DEFAULT_GENERATION_LIFETIME,
@@ -53,7 +53,7 @@ const PERFORMANCE_BOOST_URL_PARAM = 'boost';
 //  Genome array, concatenated to a string (i.e. '1010011')
 type GenomeKey = string;
 
-type GenomeLossType = Record<GenomeKey, number | null>;
+type GenomeLossRecordType = Record<GenomeKey, CarLossWithDetailsType>;
 
 function EvolutionTabEvolution() {
   const {enqueue} = useSnackbar();
@@ -93,11 +93,11 @@ function EvolutionTabEvolution() {
 
   const batchTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const carsLossRef = useRef<CarsLossType[]>([{}]);
-  const [carsLoss, setCarsLoss] = useState<CarsLossType[]>([{}]);
+  const carsLossRef = useRef<LicensePlateToLossMapType[]>([{}]);
+  const [carsLoss, setCarsLoss] = useState<LicensePlateToLossMapType[]>([{}]);
   const [lossHistory, setLossHistory] = useState<number[]>([]);
   const [avgLossHistory, setAvgLossHistory] = useState<number[]>([]);
-  const genomeLossRef = useRef<GenomeLossType[]>([{}]);
+  const genomeLossRef = useRef<GenomeLossRecordType[]>([{}]);
 
   const [mutationProbability, setMutationProbability] = useState<Probability>(
     getFloatSearchParam(MUTATION_PROBABILITY_URL_PARAM, DEFAULT_MUTATION_PROBABILITY)
@@ -143,7 +143,7 @@ function EvolutionTabEvolution() {
     setCarsBatchIndex(null);
   };
 
-  const onCarLossUpdate = (licensePlate: CarLicencePlateType, loss: number) => {
+  const onCarLossUpdate = (licensePlate: CarLicencePlateType, lossWithDetails: CarLossWithDetailsType) => {
     if (generationIndex === null) {
       return;
     }
@@ -152,7 +152,7 @@ function EvolutionTabEvolution() {
     if (!carsLossRef.current[generationIndex]) {
       carsLossRef.current[generationIndex] = {};
     }
-    carsLossRef.current[generationIndex][licensePlate] = loss;
+    carsLossRef.current[generationIndex][licensePlate] = lossWithDetails;
 
     // Save the car loss to the "GenomeKey → Loss" map.
     if (!genomeLossRef.current[generationIndex]) {
@@ -162,7 +162,7 @@ function EvolutionTabEvolution() {
       const carGenomeIndex = carsRef.current[licensePlate].genomeIndex;
       const carGenome: Genome = generation[carGenomeIndex];
       const carGenomeKey: GenomeKey = carGenome.join('');
-      genomeLossRef.current[generationIndex][carGenomeKey] = loss;
+      genomeLossRef.current[generationIndex][carGenomeKey] = lossWithDetails;
     }
   };
 
@@ -275,7 +275,7 @@ function EvolutionTabEvolution() {
       return;
     }
 
-    const generationLoss: CarsLossType = carsLossRef.current[generationIndex];
+    const generationLoss: LicensePlateToLossMapType = carsLossRef.current[generationIndex];
     if (!generationLoss) {
       return;
     }
@@ -285,7 +285,7 @@ function EvolutionTabEvolution() {
     let bestGenomeIndex: number = -1;
 
     Object.keys(generationLoss).forEach((licencePlate: CarLicencePlateType) => {
-      const carLoss: number | null = generationLoss[licencePlate];
+      const carLoss: number | null = generationLoss[licencePlate].loss;
       if (carLoss === null) {
         return;
       }
@@ -314,7 +314,7 @@ function EvolutionTabEvolution() {
       return;
     }
 
-    const generationLoss: CarsLossType = carsLossRef.current[generationIndex];
+    const generationLoss: LicensePlateToLossMapType = carsLossRef.current[generationIndex];
     if (!generationLoss) {
       return;
     }
@@ -328,7 +328,7 @@ function EvolutionTabEvolution() {
       if (licencePlate === bestLicensePlateSoFar) {
         return;
       }
-      const carLoss: number | null = generationLoss[licencePlate];
+      const carLoss: number | null = generationLoss[licencePlate].loss;
       if (carLoss === null) {
         return;
       }
@@ -354,17 +354,17 @@ function EvolutionTabEvolution() {
     if (generationIndex === null) {
       return;
     }
-    const generationLoss: CarsLossType = carsLossRef.current[generationIndex];
+    const generationLoss: LicensePlateToLossMapType = carsLossRef.current[generationIndex];
 
     // Sync min loss history.
     const newLossHistory = [...lossHistory];
     if (generationLoss) {
       newLossHistory[generationIndex] = Object.values(generationLoss).reduce(
-        (minVal: number, currVal: number | null) => {
-          if (currVal === null) {
+        (minVal: number, currVal: CarLossWithDetailsType | null) => {
+          if (typeof currVal?.loss !== 'number') {
             return minVal;
           }
-          return Math.min(minVal, currVal);
+          return Math.min(minVal, currVal.loss);
         },
         Infinity
       );
@@ -378,10 +378,10 @@ function EvolutionTabEvolution() {
     if (generationLoss) {
       let nonNullLosses = 0;
 
-      const ascSortedGenerationLoss = Object.values<number | null>(generationLoss)
-        .sort((a: number | null, b: number | null): number => {
-          const aTuned: number = a === null ? Infinity : a;
-          const bTuned: number = b === null ? Infinity : b;
+      const ascSortedGenerationLoss = Object.values<CarLossWithDetailsType | null>(generationLoss)
+        .sort((a: CarLossWithDetailsType | null, b: CarLossWithDetailsType | null): number => {
+          const aTuned: number = typeof a?.loss !== 'number' ? Infinity : a.loss;
+          const bTuned: number = typeof b?.loss !== 'number' ? Infinity : b.loss;
           if (aTuned < bTuned) {
             return -1;
           }
@@ -398,12 +398,12 @@ function EvolutionTabEvolution() {
       );
 
       const lossSum = P50GenerationLoss.reduce(
-        (sum: number, currVal: number | null) => {
-          if (currVal === null) {
+        (sum: number, currVal: CarLossWithDetailsType | null) => {
+          if (typeof currVal?.loss !== 'number') {
             return sum;
           }
           nonNullLosses += 1;
-          return sum + currVal;
+          return sum + currVal?.loss;
         },
         0
       );
@@ -419,14 +419,11 @@ function EvolutionTabEvolution() {
     if (
       generationIndex === null ||
       !genomeLossRef.current[generationIndex] ||
-      typeof genomeLossRef.current[generationIndex][genomeKey] !== 'number'
+      typeof genomeLossRef.current[generationIndex][genomeKey]?.loss !== 'number'
     ) {
       throw new Error('Fitness value for specified genome is undefined');
     }
-    const loss = genomeLossRef.current[generationIndex][genomeKey];
-    if (typeof loss !== 'number') {
-      throw new Error('Loss value is not a number');
-    }
+    const loss = genomeLossRef.current[generationIndex][genomeKey]?.loss;
     return carLossToFitness(loss, FITNESS_ALPHA);
   };
 
@@ -617,7 +614,7 @@ function EvolutionTabEvolution() {
       return;
     }
     logger.info(`Batch #${carsBatchIndex} lifetime ended`);
-    setCarsLoss(_.cloneDeep<CarsLossType[]>(carsLossRef.current));
+    setCarsLoss(_.cloneDeep<LicensePlateToLossMapType[]>(carsLossRef.current));
     syncLossHistory();
     const bestLicensePlate = syncBestGenome();
     syncSecondBestGenome(bestLicensePlate);

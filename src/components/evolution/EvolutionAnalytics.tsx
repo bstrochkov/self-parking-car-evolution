@@ -1,7 +1,7 @@
 import React from 'react';
 import { Block } from 'baseui/block';
 
-import PopulationTable, { CarsInProgressType, CarsLossType } from './PopulationTable';
+import PopulationTable, { CarsInProgressType, LicensePlateToLossMapType } from './PopulationTable';
 import EvolutionBoardParams from './EvolutionBoardParams';
 import EvolutionTiming from './EvolutionTiming';
 import LossHistory from './LossHistory';
@@ -34,7 +34,7 @@ type EvolutionAnalyticsProps = {
   avgLossHistory: number[],
   cars: CarsType,
   carsInProgress: CarsInProgressType,
-  carsLoss: CarsLossType[],
+  carsLoss: LicensePlateToLossMapType[],
   bestGenome: Genome | null,
   bestCarLicencePlate: CarLicencePlateType | null,
   minLoss: number | null,

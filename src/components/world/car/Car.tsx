@@ -61,7 +61,7 @@ type CarProps = {
   baseColor?: string,
   onCollide?: (carMetaData: CarMetaData, event: any) => void,
   onSensors?: (sensors: SensorValuesType) => void,
-  onMove?: (wheelsPositions: RectanglePoints) => void,
+  onMove?: (wheelsPositions: RectanglePoints, numberOfCollisions: number) => void,
   collisionFilterGroup?: number,
   collisionFilterMask?: number,
   onCarReady?: (args: OnCarReadyArgs) => void,
@@ -180,6 +180,8 @@ function Car(props: CarProps) {
     ],
   };
 
+  const numberOfCollisionsRef = useRef<number>(0);
+
   wheels[flWheelIndex] = flWheel;
   wheels[frWheelIndex] = frWheel;
   wheels[blWheelIndex] = blWheel;
@@ -253,10 +255,11 @@ function Car(props: CarProps) {
 
   // @TODO: Move the logic of label content population to the evolution components.
   // Car shouldn't know about the evolution loss function.
-  const onUpdateLabel = (wheelsPositions: RectanglePoints) => {
+  const onUpdateLabel = (wheelsPositions: RectanglePoints, numberOfCollisions: number) => {
     const loss = getCarLoss({
       wheelsPosition: wheelsPositions,
       parkingLotCorners: PARKING_SPOT_POINTS,
+      numberOfCollisions,
     });
     setCarLoss(loss);
   };
@@ -298,13 +301,13 @@ function Car(props: CarProps) {
       br: br.toArray(),
     };
     if (onMoveThrottledRef.current) {
-      onMoveThrottledRef.current(wheelPositions);
+      onMoveThrottledRef.current(wheelPositions, numberOfCollisionsRef.current);
     }
 
     // @TODO: Move the logic of label content population to the evolution components.
     // Car shouldn't know about the evolution loss function.
     if (withLabel && onUpdateLabelThrottledRef.current) {
-      onUpdateLabelThrottledRef.current(wheelPositions);
+      onUpdateLabelThrottledRef.current(wheelPositions, numberOfCollisionsRef.current);
     }
   });
 
@@ -325,6 +328,8 @@ function Car(props: CarProps) {
       <span style={{color: distanceColor, fontWeight: 'bold'}}>
         {formatLossValue(carLoss)}
       </span>
+      {' '}
+      Collisions: {numberOfCollisionsRef.current}
     </span>
   ) : null;
 
@@ -342,7 +347,12 @@ function Car(props: CarProps) {
         visibleSensors={visibleSensors}
         baseColor={baseColor}
         bodyProps={{ ...bodyProps }}
-        onCollide={(event) => onCollide(carMetaData, event)}
+        onCollide={(event) => {
+          if (event?.body?.userData?.type === 'chassis') {
+            numberOfCollisionsRef.current++;
+          }
+          onCollide(carMetaData, event);
+        }}
         onSensors={onSensors}
         userData={carMetaData}
         collisionFilterGroup={collisionFilterGroup}

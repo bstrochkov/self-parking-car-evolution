@@ -1,13 +1,14 @@
 import { Gene, Generation, Genome } from '../../../libs/genetic';
 import {
   CarLicencePlateType,
+  CarLossWithDetailsType,
   CarsType,
   EngineOptionsType,
   SensorValuesType, SensorValueType,
   WheelOptionsType
 } from '../../world/types/car';
 import { RectanglePoints } from '../../../types/vectors';
-import { CAR_SENSORS_NUM, engineFormula, carLoss, wheelsFormula } from '../../../libs/carGenetic';
+import { CAR_SENSORS_NUM, engineFormula, carLoss, wheelsFormula, carDistanceFromParking } from '../../../libs/carGenetic';
 import { SENSOR_DISTANCE_FALLBACK } from '../../world/car/constants';
 import { read, remove, write } from '../../../utils/storage';
 import { PARKING_SPOT_POINTS } from '../../world/constants/parking';
@@ -29,7 +30,7 @@ const generateLicencePlate = (
 type GenerationToCarsProps = {
   generationIndex: number | null,
   generation: Generation,
-  onLossUpdate?: (licencePlate: CarLicencePlateType, loss: number) => void,
+  onLossUpdate?: (licencePlate: CarLicencePlateType, loss: CarLossWithDetailsType) => void,
 };
 
 export const generationToCars = (props: GenerationToCarsProps): CarsType => {
@@ -64,12 +65,17 @@ export const generationToCars = (props: GenerationToCarsProps): CarsType => {
       return 'straight';
     };
 
-    const onMove = (wheelsPoints: RectanglePoints) => {
+    const onMove = (wheelsPoints: RectanglePoints, numberOfCollisions: number) => {
       const loss = carLoss({
         wheelsPosition: wheelsPoints,
         parkingLotCorners: PARKING_SPOT_POINTS,
+        numberOfCollisions
       });
-      onLossUpdate(licencePlate, loss);
+      onLossUpdate(licencePlate, {
+        loss: loss,
+        distanceFromParking: carDistanceFromParking(wheelsPoints, PARKING_SPOT_POINTS),
+        numberOfCollisions,
+      });
     };
 
     cars[licencePlate] = {
@@ -80,7 +86,7 @@ export const generationToCars = (props: GenerationToCarsProps): CarsType => {
       onEngine,
       onWheel,
       onMove,
-      onHit: () => {},
+      onCollide: () => {},
     };
   });
   return cars;

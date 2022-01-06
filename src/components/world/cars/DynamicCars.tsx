@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 
 import Car, { OnCarReadyArgs } from '../car/Car';
-import { CarType, EngineOptionsType, SensorValuesType, userCarUUID, WheelOptionsType } from '../types/car';
+import {CarMetaData, CarType, EngineOptionsType, SensorValuesType, userCarUUID, WheelOptionsType} from '../types/car';
 import { carEvents, off, on } from '../utils/events';
 import {
   onEngineBackward,
@@ -118,11 +118,17 @@ function DynamicCars(props: DynamicCarsProps) {
       }
     };
 
-    const onMove = (wheelsPositions: RectanglePoints) => {
+    const onMove = (wheelsPositions: RectanglePoints, numberOfCollisions: number) => {
       if (car.onMove) {
-        car.onMove(wheelsPositions);
+        car.onMove(wheelsPositions, numberOfCollisions);
       }
     };
+
+    const onCollide = (carMetaData: CarMetaData, event: any) => {
+      if (car.onCollide) {
+        car.onCollide(carMetaData, event);
+      }
+    }
 
     const zPositions: Record<DynamicCarsPosition, number> = {
       'rear': withRandomStartingPoint ? -7 - 2 * Math.random() : -7,
@@ -158,6 +164,7 @@ function DynamicCars(props: DynamicCarsProps) {
         onCarDestroy={onCarDestroy}
         onSensors={onSensors}
         onMove={onMove}
+        onCollide={onCollide}
         movable
         styled={styledCar}
         baseColor={carColor}

@@ -5,19 +5,18 @@ import { Tag, VARIANT as TAG_VARIANT, KIND as TAG_KIND } from 'baseui/tag';
 import { StyledSpinnerNext } from 'baseui/spinner';
 import { withStyle } from 'baseui';
 
-import { CarLicencePlateType, CarsType, CarType } from '../world/types/car';
+import { CarLicencePlateType, CarLossWithDetailsType, CarsType, CarType } from '../world/types/car';
 import { formatLossValue } from './utils/evolution';
 import FadeIn from '../shared/FadeIn';
-import { FITNESS_ALPHA, LOSS_VALUE_BAD_THRESHOLD, LOSS_VALUE_GOOD_THRESHOLD } from './constants/evolution';
-import { carLossToFitness } from '../../libs/carGenetic';
+import { LOSS_VALUE_BAD_THRESHOLD, LOSS_VALUE_GOOD_THRESHOLD } from './constants/evolution';
 
 export type CarsInProgressType = Record<CarLicencePlateType, boolean>;
-export type CarsLossType = Record<CarLicencePlateType, number | null>;
+export type LicensePlateToLossMapType = Record<CarLicencePlateType, CarLossWithDetailsType>;
 
 type PopulationTableProps = {
   cars: CarsType,
   carsInProgress: CarsInProgressType,
-  carsLoss: CarsLossType,
+  carsLoss: LicensePlateToLossMapType,
 };
 
 const sortTable = true;
@@ -39,7 +38,8 @@ function PopulationTable(props: PopulationTableProps) {
   const columns = [
     'Licence Plate',
     'Loss',
-    'Fitness',
+    'Distance',
+    'Collisions'
   ];
 
   const rowsData: React.ReactNode[][] = carsArray
@@ -98,21 +98,33 @@ function PopulationTable(props: PopulationTableProps) {
         </Block>
       );
 
-      const fitnessValue: number | null = getCarFitness(carsLoss, car);
-      const fitnessCell = carsInProgress[car.licencePlate] ? (
+      const distanceValue: number | null = getCarDistance(carsLoss, car);
+      const distanceCell = carsInProgress[car.licencePlate] ? (
         <FadeIn>
           <CellSpinner />
         </FadeIn>
       ) : (
         <Block color={carLossColor}>
-          {fitnessValue}
+          {distanceValue}
+        </Block>
+      );
+
+      const numberOfCollisionsValue: number | null = getCarNumberOfCollisions(carsLoss, car);
+      const numberOfCollisionsCell = carsInProgress[car.licencePlate] ? (
+        <FadeIn>
+          <CellSpinner />
+        </FadeIn>
+      ) : (
+        <Block color={carLossColor}>
+          {numberOfCollisionsValue}
         </Block>
       );
 
       return [
         licencePlateCell,
         lossCell,
-        fitnessCell,
+        distanceCell,
+        numberOfCollisionsCell,
       ];
     });
 
@@ -141,15 +153,21 @@ function PopulationTable(props: PopulationTableProps) {
   );
 }
 
-function getCarLoss(carsLoss: CarsLossType, car: CarType): number | null {
-  return carsLoss.hasOwnProperty(car.licencePlate) && typeof carsLoss[car.licencePlate] === 'number'
-    ? formatLossValue(carsLoss[car.licencePlate])
+function getCarLoss(carsLoss: LicensePlateToLossMapType, car: CarType): number | null {
+  return carsLoss.hasOwnProperty(car.licencePlate) && typeof carsLoss[car.licencePlate].loss === 'number'
+    ? formatLossValue(carsLoss[car.licencePlate].loss)
     : null;
 }
 
-function getCarFitness(carsLoss: CarsLossType, car: CarType): number | null {
-  return carsLoss.hasOwnProperty(car.licencePlate) && typeof carsLoss[car.licencePlate] === 'number'
-    ? formatLossValue(carLossToFitness(carsLoss[car.licencePlate] || 0, FITNESS_ALPHA))
+function getCarDistance(carsLoss: LicensePlateToLossMapType, car: CarType): number | null {
+  return carsLoss.hasOwnProperty(car.licencePlate) && typeof carsLoss[car.licencePlate].distanceFromParking === 'number'
+    ? formatLossValue(carsLoss[car.licencePlate].distanceFromParking)
+    : null;
+}
+
+function getCarNumberOfCollisions(carsLoss: LicensePlateToLossMapType, car: CarType): number | null {
+  return carsLoss.hasOwnProperty(car.licencePlate) && typeof carsLoss[car.licencePlate].distanceFromParking === 'number'
+    ? formatLossValue(carsLoss[car.licencePlate].numberOfCollisions)
     : null;
 }
 
